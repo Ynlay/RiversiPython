@@ -243,6 +243,7 @@ while True:
                 drawBoard(validMovesBoard)
             else: 
                 drawBoard(mainboard)
+                
             showPoints(playerTile, computerTile)
             move = getPlayerMove(mainboard, playerTile)
             if move == 'quit':

@@ -41,8 +41,7 @@ def newBoard():
     return board
 
 
-# WRITE ON BOARD NO VALIDATION
-# PLAYER INPUT
+# Player Input with validation on the board
 def getPlayerMove(board, playerTile):
     DIGITS1TO8 = '1 2 3 4 5 6 7 8'.split()
     while True:
@@ -51,7 +50,11 @@ def getPlayerMove(board, playerTile):
         if len(move) == 2 and move[0] in DIGITS1TO8 and move[1] in DIGITS1TO8:
             x = int(move[0]) - 1
             y = int(move[1]) - 1
-            break
+            if isValidMove(board, playerTile, x, y) is False:
+                print("Wrong Move try again!")
+                continue
+            else:
+                break
         else:
             print('That is not a valid move.')
             print('Type the x digit (1-8), then the y digit (1-8).')
@@ -59,11 +62,21 @@ def getPlayerMove(board, playerTile):
     return[x, y]
 
 
+# Sets the tile
 def makeMove(board, tile, xstart, ystart):
+    tilesToFlip = isValidMove(board, tile, xstart, ystart)
+
+    if tilesToFlip is False:
+        return false
+
     board[xstart][ystart] = tile
+
+    for x, y in tilesToFlip:
+        board[x][y] = tile
     return True
 
 
+# Allows the player to pick the tile he wants
 def chooseTile():
     print('Do you want to start first or second?')
     print('O starts First, X starts Second')
@@ -74,10 +87,116 @@ def chooseTile():
         playerTile = input().upper()
     if playerTile == 'X':
         enemyTile = 'O'
-    else: 
+    else:
         enemyTile = 'X'
     return [playerTile, enemyTile]
 
+
+# Returns True if the coordinates are located on the board
+def isOnBoard(x, y):
+    return x >= 0 and x <= 7 and y >= 0 and y <= 7
+
+
+# Returns False if the player's move on space xstart, ystart is invalid
+# If it is a valid movie, returns a list of spaces that would become the
+# player's if they made a move here
+def isValidMove(board, tile, xstart, ystart):
+    if board[xstart][ystart] != ' ' or not isOnBoard(xstart, ystart):
+        return False
+
+    board[xstart][ystart] = tile   # temporarily set the tile on the board
+
+    if tile == 'X':
+        otherTile = 'O'
+    else:
+        otherTile = 'X'
+
+    tilesToFlip = []
+    for xdirection, ydirection in [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1],
+                                   [-1, -1], [-1, 0], [-1, 1]]:
+        x, y = xstart, ystart
+        x += xdirection  # first step in the direction
+        y += ydirection  # first step in the direction
+        # There is a piece belonging to the other player next to our piece
+        if isOnBoard(x, y) and board[x][y] == otherTile:
+            x += xdirection
+            y += ydirection
+            if not isOnBoard(x, y):
+                continue
+            while board[x][y] == otherTile:
+                x += xdirection
+                y += ydirection
+                # Break out of while loop then continue in for loop
+                if not isOnBoard(x, y):
+                    break
+            if not isOnBoard(x, y):
+                continue
+            # There are pieces to flip over. Go in the reverse direction until
+            # we reach the original space, noting all the tiles along the way
+            if board[x][y] == tile:
+                while True:
+                    x -= xdirection
+                    y -= ydirection
+                    print(x)
+                    print(y)
+                    if x == xstart and y == ystart:
+                        break
+                    tilesToFlip.append([x, y])
+
+    board[xstart][ystart] = ' '  # Restores the empty space
+    # If no tiles are flipped, this is not a valid move
+    if len(tilesToFlip) == 0:
+        return False
+    return tilesToFlip
+
+
+def Minimax(board, player, depth, maximizingPlayer):
+    if depth == 0 or IsTerminalNode(board, player):
+        return EvalBoard(board, player)
+    if maximizingPlayer:
+        bestValue = minEvalBoard
+        for y in range(n):
+            for x in range(n):
+                if ValidMove(board, x, y, player):
+                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
+                    v = Minimax(boardTemp, player, depth - 1, False)
+                    bestValue = max(bestValue, v)
+    else:  # minimizingPlayer
+        bestValue = maxEvalBoard
+        for y in range(n):
+            for x in range(n):
+                if ValidMove(board, x, y, player):
+                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
+                    v = Minimax(boardTemp, player, depth - 1, True)
+                    bestValue = min(bestValue, v)
+    return bestValue
+
+
+def AlphaBeta(board, player, depth, alpha, beta, maximizingPlayer):
+    if depth == 0 or IsTerminalNode(board, player):
+        return EvalBoard(board, player)
+    if maximizingPlayer:
+        v = minEvalBoard
+        for y in range(n):
+            for x in range(n):
+                if ValidMove(board, x, y, player):
+                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
+                    v = max(v, AlphaBeta(boardTemp, player, depth - 1, alpha, beta, False))
+                    alpha = max(alpha, v)
+                    if beta <= alpha:
+                        break  # beta cut-off
+        return v
+    else:  # minimizingPlayer
+        v = maxEvalBoard
+        for y in range(n):
+            for x in range(n):
+                if ValidMove(board, x, y, player):
+                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
+                    v = min(v, AlphaBeta(boardTemp, player, depth - 1, alpha, beta, True))
+                    beta = min(beta, v)
+                    if beta <= alpha:
+                        break  # alpha cut-off
+        return v
 
 tiles = chooseTile()
 playerTile = tiles[0]
@@ -90,3 +209,8 @@ drawBoard(board)
 print('PLAYER TILE: ' + playerTile)
 print('ENEMY TILE: ' + enemyTile)
 
+print("Make a move!: ")
+while True:
+    move = getPlayerMove(board, playerTile)
+    makeMove(board, playerTile, move[0], move[1])
+    drawBoard(board)
