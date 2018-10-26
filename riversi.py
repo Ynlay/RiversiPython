@@ -1,5 +1,6 @@
 import random
 import sys
+import os
 
 
 # Prints out the Board
@@ -11,7 +12,7 @@ def drawBoard(board):
     for y in range(8):
         print(VLINE)
         print(y+1, end=' ')
-        for x in range(8):
+        for x in range(n):
             print('| %s' % (board[x][y]), end=' ')
         print('|')
         print(VLINE)
@@ -21,8 +22,8 @@ def drawBoard(board):
 
 # Resets the Board
 def resetBoard(board):
-    for x in range(8):
-        for y in range(8):
+    for x in range(n):
+        for y in range(n):
             board[x][y] = ' '
 
     # Starting pieces:
@@ -36,8 +37,8 @@ def resetBoard(board):
 def newBoard():
 
     board = []
-    for i in range(8):
-        board.append([' '] * 8)
+    for i in range(n):
+        board.append([' '] * n)
     return board
 
 
@@ -60,6 +61,15 @@ def getPlayerMove(board, playerTile):
             print('Type the x digit (1-8), then the y digit (1-8).')
             print('For example, 81, will be the top-right corner.')
     return[x, y]
+
+
+# if no valid move(s) possible then True
+def isTerminalNode(board, player):
+    for y in range(n):
+        for x in range(n):
+            if isValidMove(board, player, x, y):
+                return False
+    return True
 
 
 # Sets the tile
@@ -137,8 +147,6 @@ def isValidMove(board, tile, xstart, ystart):
                 while True:
                     x -= xdirection
                     y -= ydirection
-                    print(x)
-                    print(y)
                     if x == xstart and y == ystart:
                         break
                     tilesToFlip.append([x, y])
@@ -151,7 +159,7 @@ def isValidMove(board, tile, xstart, ystart):
 
 
 def Minimax(board, player, depth, maximizingPlayer):
-    if depth == 0 or IsTerminalNode(board, player):
+    if depth == 0 or isTerminalNode(board, player):
         return EvalBoard(board, player)
     if maximizingPlayer:
         bestValue = minEvalBoard
@@ -198,9 +206,30 @@ def AlphaBeta(board, player, depth, alpha, beta, maximizingPlayer):
                         break  # alpha cut-off
         return v
 
+
+n = 8  # Board size
+minEvalBoard = -1  # min - 1
+maxEvalBoard = n * n + 4 * n + 4 + 1  # max + 1
+
+
+def evalBoard(board, player):
+    tot = 0
+    for y in range(n):
+        for x in range(n):
+            if board[y][x] == player:
+                if (x == 0 or x == n - 1) and (y == 0 or y == n - 1):
+                    tot += 4  # corner
+                elif (x == 0 or x == n - 1) or (y == 0 or y == n - 1):
+                    tot += 2  # side
+                else:
+                    tot += 1
+    return tot
+
 tiles = chooseTile()
 playerTile = tiles[0]
 enemyTile = tiles[1]
+
+depth = 4
 
 board = newBoard()
 resetBoard(board)
@@ -209,8 +238,13 @@ drawBoard(board)
 print('PLAYER TILE: ' + playerTile)
 print('ENEMY TILE: ' + enemyTile)
 
-print("Make a move!: ")
 while True:
     move = getPlayerMove(board, playerTile)
     makeMove(board, playerTile, move[0], move[1])
     drawBoard(board)
+
+    if isTerminalNode(board, playerTile):
+            print('Player cannot play! Game ended!')
+            print('Score User: ' + str(evalBoard(board, 'O')))
+            print('Score AI  : ' + str(evalBoard(board, 'X')))
+            os._exit(0)
