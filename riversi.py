@@ -1,6 +1,7 @@
 import random
 import sys
 import os
+import copy
 
 
 # Prints out the Board
@@ -72,7 +73,28 @@ def isTerminalNode(board, player):
     return True
 
 
-# Sets the tile
+# Calculates Best Move
+def bestMove(board, player):
+    maxPoints = 0
+    mx = -1
+    my = -1
+    for y in range(n):
+        for x in range(n):
+            tilesToFlip = isValidMove(board, player, x, y)
+            if tilesToFlip:
+                boardTemp = makeMove(copy.deepcopy(board), player, x, y)
+
+                points = AlphaBeta(board, player, depth, minEvalBoard,
+                                   maxEvalBoard, True)
+
+                if points > maxPoints:
+                    maxPoints = points
+                    mx = x
+                    my = y
+    return (mx, my)
+
+
+# Sets the tile, returns the board
 def makeMove(board, tile, xstart, ystart):
     tilesToFlip = isValidMove(board, tile, xstart, ystart)
 
@@ -83,7 +105,7 @@ def makeMove(board, tile, xstart, ystart):
 
     for x, y in tilesToFlip:
         board[x][y] = tile
-    return True
+    return board
 
 
 # Allows the player to pick the tile he wants
@@ -158,38 +180,19 @@ def isValidMove(board, tile, xstart, ystart):
     return tilesToFlip
 
 
-def Minimax(board, player, depth, maximizingPlayer):
-    if depth == 0 or isTerminalNode(board, player):
-        return EvalBoard(board, player)
-    if maximizingPlayer:
-        bestValue = minEvalBoard
-        for y in range(n):
-            for x in range(n):
-                if ValidMove(board, x, y, player):
-                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
-                    v = Minimax(boardTemp, player, depth - 1, False)
-                    bestValue = max(bestValue, v)
-    else:  # minimizingPlayer
-        bestValue = maxEvalBoard
-        for y in range(n):
-            for x in range(n):
-                if ValidMove(board, x, y, player):
-                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
-                    v = Minimax(boardTemp, player, depth - 1, True)
-                    bestValue = min(bestValue, v)
-    return bestValue
-
-
+# Alpha Beta pruning
 def AlphaBeta(board, player, depth, alpha, beta, maximizingPlayer):
-    if depth == 0 or IsTerminalNode(board, player):
-        return EvalBoard(board, player)
+    if depth == 0 or isTerminalNode(board, player):
+        return evalBoard(board, player)
     if maximizingPlayer:
         v = minEvalBoard
         for y in range(n):
             for x in range(n):
-                if ValidMove(board, x, y, player):
-                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
-                    v = max(v, AlphaBeta(boardTemp, player, depth - 1, alpha, beta, False))
+                tilesToFlip = isValidMove(board, player, x, y)
+                if tilesToFlip:
+                    boardTemp = makeMove(copy.deepcopy(board), player, x, y)
+                    v = max(v, AlphaBeta(boardTemp, player, depth - 1, alpha,
+                                         beta, False))
                     alpha = max(alpha, v)
                     if beta <= alpha:
                         break  # beta cut-off
@@ -198,36 +201,39 @@ def AlphaBeta(board, player, depth, alpha, beta, maximizingPlayer):
         v = maxEvalBoard
         for y in range(n):
             for x in range(n):
-                if ValidMove(board, x, y, player):
-                    (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
-                    v = min(v, AlphaBeta(boardTemp, player, depth - 1, alpha, beta, True))
+                tilesToFlip = isValidMove(board, player, x, y)
+                if tilesToFlip:
+                    boardTemp = makeMove(copy.deepcopy(board), player, x, y)
+                    v = min(v, AlphaBeta(boardTemp, player, depth - 1, alpha,
+                            beta, True))
                     beta = min(beta, v)
                     if beta <= alpha:
                         break  # alpha cut-off
         return v
 
 
-n = 8  # Board size
-minEvalBoard = -1  # min - 1
-maxEvalBoard = n * n + 4 * n + 4 + 1  # max + 1
-
-
+# Evaluates the board's score
 def evalBoard(board, player):
-    tot = 0
+    score = 0
     for y in range(n):
         for x in range(n):
             if board[y][x] == player:
                 if (x == 0 or x == n - 1) and (y == 0 or y == n - 1):
-                    tot += 4  # corner
+                    score += 4  # corner
                 elif (x == 0 or x == n - 1) or (y == 0 or y == n - 1):
-                    tot += 2  # side
+                    score += 2  # side
                 else:
-                    tot += 1
-    return tot
+                    score += 1
+    return score
+
+n = 8  # Board size
+minEvalBoard = -1  # min - 1
+maxEvalBoard = n * n + 4 * n + 4 + 1  # max + 1
 
 tiles = chooseTile()
 playerTile = tiles[0]
 enemyTile = tiles[1]
+currentTile = 'O'
 
 depth = 4
 
@@ -239,12 +245,24 @@ print('PLAYER TILE: ' + playerTile)
 print('ENEMY TILE: ' + enemyTile)
 
 while True:
-    move = getPlayerMove(board, playerTile)
-    makeMove(board, playerTile, move[0], move[1])
-    drawBoard(board)
 
-    if isTerminalNode(board, playerTile):
-            print('Player cannot play! Game ended!')
+    if currentTile == playerTile:  # user's turn
+        move = getPlayerMove(board, playerTile)
+        makeMove(board, playerTile, move[0], move[1])
+        drawBoard(board)
+        currentTile = enemyTile
+    else:  # AI's turn
+        print('Confirm AI\'s turn (press any key)')
+        input()
+        (x, y) = bestMove(board, currentTile)
+        if not (x == -1 and y == -1):
+            board = makeMove(board, enemyTile, x, y)
+            drawBoard(board)
+            print('AI played (X Y): ' + str(x+1) + '' + str(y+1))
+            currentTile = playerTile
+
+    if isTerminalNode(board, currentTile):
+            print('No more moves left! Cannot play! Game ended!')
             print('Score User: ' + str(evalBoard(board, 'O')))
             print('Score AI  : ' + str(evalBoard(board, 'X')))
             os._exit(0)
