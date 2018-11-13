@@ -84,7 +84,7 @@ def bestMove(board, player):
             if tilesToFlip:
                 boardTemp = makeMove(copy.deepcopy(board), player, x, y)
 
-                points = AlphaBeta(board, player, depth, minEvalBoard,
+                points = AlphaBeta(boardTemp, player, depth, minEvalBoard,
                                    maxEvalBoard, True)
 
                 if points > maxPoints:
